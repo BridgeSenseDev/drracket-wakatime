@@ -18,12 +18,13 @@
 (define wakatime-cfg-path
   (build-path (find-system-path 'home-dir) ".wakatime.cfg"))
 
-(define (send-heartbeat #:file filename #:project [project #f])
+(define (send-heartbeat #:file filename #:project [project #f] #:is-write? [is-write? #f])
   (define exe (find-executable-path "wakatime-cli"))
   (unless exe
     (error 'executable "cannot find executable in \$PATH, please check your environment setup"))
-  (define cmd "$exe --entity $filename --language racket --plugin drracket-wakatime/$version --write --verbose")
+  (define cmd "$exe --entity $filename --language racket --plugin drracket-wakatime/$version --verbose")
   (set! cmd (if project (string-append cmd " --project $project") cmd))
+  (set! cmd (string-append cmd (if is-write? " --write" "")))
   (match-define (list stdout stdin pid stderr run)
     (process cmd))
   (run 'wait)
@@ -33,18 +34,15 @@
   (close-input-port stderr)
   (close-output-port stdin)
 
-  (define (raise-waka-error code)
+  (unless (member exit-code '(0 102 112))
     (define msg
-      (case code
-        [(0 102 112) (void)]
+      (case exit-code
         [(103) (format "Config parsing error (fix your ~a file)" wakatime-cfg-path)]
         [(104) "Invalid API Key (check your key at https://wakatime.com/settings)"]
         [(105) "Malformed heartbeat error"]
         [(106) "API timeout (will retry later)"]
         [else  (format "Unknown error code ~a (check ~a)" exit-code wakatime-log-path)]))
-    (error 'wakatime msg))
-
-  (raise-waka-error exit-code))
+    (error 'wakatime msg)))
 
 (module+ test
   (require rackunit)
