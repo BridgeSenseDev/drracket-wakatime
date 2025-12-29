@@ -1,15 +1,17 @@
 #lang racket/base
+
 (provide has-wakatime-api-key?
          get-wakatime-api-key
          set-wakatime-api-key)
-(require racket/file
-         racket/string)
 
-(define wakatime-path (build-path (find-system-path 'home-dir) ".wakatime.cfg"))
+(require racket/file
+         racket/string
+         "path.rkt"
+         "logger.rkt")
 
 (define (read-config)
-  (if (file-exists? wakatime-path)
-      (file->string wakatime-path)
+  (if (file-exists? wakatime-cfg-path)
+      (file->string wakatime-cfg-path)
       ""))
 
 ;; Parse INI to find api_key under [settings]
@@ -73,11 +75,9 @@
   
   (with-handlers ([exn:fail:filesystem?
                    (lambda (e)
-                     (error 'set-wakatime-api-key
-                            "Cannot write to ~a: ~a"
-                            wakatime-path
-                            (exn-message e)))])
-    (call-with-output-file wakatime-path
+                     (log-wakatime 
+                      (format "Could not write to configuration file ~a\n\nError: ~a" wakatime-cfg-path (exn-message e))))])
+    (call-with-output-file wakatime-cfg-path
       (lambda (out)
         (display (string-join final-lines "\n") out))
       #:exists 'replace)))

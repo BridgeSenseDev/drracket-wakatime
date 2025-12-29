@@ -1,11 +1,17 @@
-#lang racket
+#lang racket/base
+
 (provide tool@)
+
 (require drracket/tool
+         racket/unit
+         racket/path
+         racket/class
          framework
          racket/gui/base
          "send-heartbeat.rkt"
          "find-project.rkt"
-         "wakatime-config.rkt")
+         "wakatime-config.rkt"
+         "install-cli.rkt")
 
 (define-unit tool@
   (import drracket:tool^)
@@ -17,7 +23,8 @@
 
   (define (phase1)
     (unless (has-wakatime-api-key?)
-      (set-wakatime-api-key (get-text-from-user "wakatime api-key" "enter key:"))))
+      (set-wakatime-api-key (get-text-from-user "wakatime api-key" "enter key:")))
+    (thread ensure-wakatime-cli))
   (define (phase2) (void))
 
   (define drracket-editor-mixin
